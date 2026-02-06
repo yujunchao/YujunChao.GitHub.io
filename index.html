@@ -3,108 +3,299 @@
 <head>
 <meta charset="UTF-8">
 <title>18 個數字隨機平均分組</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  body {font-family:Arial,Helvetica,sans-serif; margin:20px; background:#f9f9f9;}
-  h1 {text-align:center;}
-  .container {max-width:800px;margin:auto;}
-  .checklist {display:grid;grid-template-columns:repeat(6,1fr);gap:8px; margin-bottom:15px;}
-  .checklist label {display:flex;align-items:center;cursor:pointer;}
-  .checklist input {margin-right:4px;}
-  .btn {padding:10px 20px;font-size:16px;background:#0066cc;color:#fff;border:none;border-radius:4px;cursor:pointer;}
-  .btn:hover {background:#004999;}
-  .result {display:flex;justify-content:space-around;margin-top:25px;}
-  .group {background:#fff;padding:15px;border-radius:6px;box-shadow:0 2px 5px rgba(0,0,0,0.1);width:30%;}
-  .group h2 {font-size:18px;margin-top:0;text-align:center;}
-  .group ul {list-style:none;padding:0;margin:0;}
-  .group li {padding:4px 0;border-bottom:1px solid #eee;}
+/* --------------------------------------------------------------
+   1️⃣ 變數（支援暗色模式）                              
+----------------------------------------------------------------- */
+:root{
+    --primary:#0066cc;
+    --primary-dark:#004999;
+    --primary-light:#cce5ff;
+    --bg-main:#f9f9f9;
+    --bg-card:#fff;
+    --text:#222;
+    --text-light:#fff;
+    --shadow:0 4px 12px rgba(0,0,0,.08);
+    --radius:10px;
+    --touch-size:48px;      /* 最小觸控目標 */
+}
+@media (prefers-color-scheme: dark){
+    :root{
+        --bg-main:#121212;
+        --bg-card:#1e1e1e;
+        --text:#e0e0e0;
+        --primary:#4ae2;
+        --primary-dark:#337ab7;
+        --primary-light:#3e5c7a;
+    }
+}
+
+/* --------------------------------------------------------------
+   2️⃣ 基本排版、按鈕、格子（保持與前一版相同）              
+----------------------------------------------------------------- */
+*{box-sizing:border-box;}
+body{margin:0;font-family:system-ui,Arial,Helvetica,sans-serif;background:var(--bg-main);color:var(--text);}
+h1{font-size:1.8rem;text-align:center;margin:1rem 0;}
+.container{max-width:900px;margin:auto;padding:0 1rem;}
+.controls{display:flex;gap:.8rem;justify-content:center;margin-bottom:.8rem;}
+.controls button{
+    flex:1;max-width:180px;padding:.6rem;font-size:1rem;
+    background:var(--primary);color:var(--text-light);
+    border:none;border-radius:var(--radius);
+    cursor:pointer;transition:background .2s,transform .1s;
+}
+.controls button:hover{background:var(--primary-dark);}
+.controls button:active{transform:scale(.96);}
+
+/* ---------- 1~18 格子（自訂 checkbox） ---------- */
+.checklist{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(45px,1fr));
+    gap:.6rem .8rem;
+    margin-bottom:1rem;
+}
+.checklist input{position:absolute;opacity:0;width:0;height:0;}
+.checklist label{
+    position:relative;
+    width%;height:var(--touch-size);
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--radius);background:#e2e2e2;
+    overflow:hidden;
+}
+.checklist label::before{
+    content:attr(data-num);
+    display:flex;align-items:center;justify-content:center;
+    width:2rem;height:2rem;border:2px solid #777;border-radius:50%;
+    font-weight:600;background:#fff;
+    transition:background .2s,border-color .2s,color .2s;
+}
+.checklist input:checked + label{
+    background:var(--primary-light);
+}
+.checklist input:checked + label::before{
+    background:var(--primary);border-color:var(--primary);color:var(--text-light);
+}
+.checklist label::after{
+    content:"";position:absolute;border-radius:50%;width:5px;height:5px;
+    background:rgba(0,0,0,.15);opacity:0;transform:scale(1);
+    transition:transform .4s,opacity .4s;
+}
+.checklist label:active::after{
+    width:120px;height:120px;top:calc(50% - 60px);left:calc(50% - 60px);
+    opacity:.3;transform:scale(0);
+}
+
+/* ---------- 隨機分組按鈕 ---------- */
+.btn{
+    display:block;width:100%;max-width:260px;margin:0 auto 1.5rem;
+    padding:.75rem 1rem;font-size:1rem;
+    background:var(--primary);color:var(--text-light);
+    border:none;border-radius:var(--radius);cursor:pointer;
+    transition:background .2s,transform .1s;
+}
+.btn:hover{background:var(--primary-dark);}
+.btn:active{transform:scale(.96);}
+
+/* --------------------------------------------------------------
+   3️⃣ ★ 重點：更美觀的「結果卡」 ★
+----------------------------------------------------------------- */
+
+/* 讓卡片在手機上可以水平滑動（滑動容器） */
+.result{
+    display:flex;flex-wrap:nowrap;gap:1rem;
+    overflow-x:auto;scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:.5rem;   /* 防止卡片底部被裁切 */
+}
+
+/* 每張卡片 */
+.group{
+    background:var(--bg-card);
+    flex:0 0 260px;                /* 手機上固定寬度，讓滑動感更明顯 */
+    scroll-snap-align:start;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:1rem;
+    display:flex;flex-direction:column;
+    gap:.6rem;
+    /* 進場動畫 */
+    opacity:0;transform:translateY(20px);
+    animation:fadeIn .45s forwards;
+}
+
+/* 卡片頭部 – 彩色橫幅 + 圓形編號 */
+.group-header{
+    display:flex;align-items:center;gap:.6rem;
+}
+.group-header .badge{
+    width:2.2rem;height:2.2rem;
+    border-radius:50%;background:var(--primary);
+    color:var(--text-light);font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+}
+.group-header h2{
+    margin:0;font-size:1.2rem;
+    color:var(--primary-dark);
+}
+
+/* 數字列表 – 使用「徽章」樣式，標記的會換成醒目顏色 */
+.number-list{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);   /* 兩欄排列 */
+    gap:.4rem .6rem;
+}
+.number-list .num{
+    background:#eaeaea;
+    border-radius:var(--radius);
+    padding:.4rem .6rem;
+    text-align:center;
+    font-weight:500;
+    transition:background .2s,color .2s;
+}
+.number-list .num.marked{
+    background:var(--primary-light);
+    color:var(--primary-dark);
+    font-weight:600;
+}
+
+/* 進場動畫 */
+@keyframes fadeIn{
+    to{opacity:1;transform:translateY(0);}
+}
+
+/* 手機等小螢幕的微調 */
+@media (max-width:480px){
+    h1{font-size:1.6rem;}
+    .checklist label{font-size:1rem;}
+    .btn{font-size:.95rem;}
+}
 </style>
 </head>
+
 <body>
 <div class="container">
-  <h1>18 個數字隨機平均分組</h1>
+    <h1>18 個數字隨機平均分組</h1>
 
-  <!-- 1. 勾選哪些位置是「標記」 -->
-  <p>請勾選要「標記」的數字位置（提供設定位置）：</p>
-  <div class="checklist" id="checklist"></div>
+    <!-- 全選 / 清除 -->
+    <div class="controls">
+        <button onclick="selectAll()">全選標記</button>
+        <button onclick="clearAll()">清除標記</button>
+    </div>
 
-  <button class="btn" onclick="distribute()">隨機分配到 3 組</button>
+    <p>點選要「標記」的數字：</p>
 
-  <!-- 2. 顯示分組結果 -->
-  <div class="result" id="result"></div>
+    <!-- 1~18 的格子 -->
+    <div class="checklist" id="checklist"></div>
+
+    <!-- 隨機分組 -->
+    <button class="btn" onclick="distribute()">隨機分配到 3 組</button>
+
+    <!-- 結果區（已套用更美觀的卡片） -->
+    <div class="result" id="result"></div>
 </div>
 
 <script>
-/* ---- 變數與初始化 ---------------------------------------------------- */
-const TOTAL_NUM = 18;               // 1~18
-const GROUP_COUNT = 3;              // 三組
-const PER_GROUP = TOTAL_NUM / GROUP_COUNT; // 每組 6 個
+/* --------------------------------------------------------------
+   基本變數 & 工具
+----------------------------------------------------------------- */
+const TOTAL_NUM   = 18;                // 1~18
+const GROUP_COUNT = 3;                 // 三組
+const PER_GROUP   = TOTAL_NUM / GROUP_COUNT; // 每組 6 個
 
-// 建立 1~18 的檢查清單
-const checklistDiv = document.getElementById('checklist');
+/* ---------- 建立 1~18 的格子 ---------- */
+const checklist = document.getElementById('checklist');
 for (let i = 1; i <= TOTAL_NUM; i++) {
-  const label = document.createElement('label');
-  label.innerHTML = `<input type="checkbox" value="${i}"> ${i}`;
-  checklistDiv.appendChild(label);
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id   = `num${i}`;
+    cb.value= i;
+
+    const lbl = document.createElement('label');
+    lbl.htmlFor = cb.id;
+    lbl.setAttribute('data-num', i);  // 用 ::before 顯示號碼
+
+    checklist.appendChild(cb);
+    checklist.appendChild(lbl);
 }
-  /* ---- 輔助函式 -------------------------------------------------------- */
-function shuffle(array) {
-  // Fisher‑Yates shuffle
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
+
+/* ---------- Fisher‑Yates 洗牌 ---------- */
+function shuffle(arr){
+    for (let i = arr.length-1; i>0; i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
 }
 
-/* ---- 主要分組函式 ---------------------------------------------------- */
-function distribute() {
-    const checked = [...document.querySelectorAll('#checklist input:checked')]
-                  .map(cb => parseInt(cb.value,10));   // 例: [2,5,9]
+/* ---------- 全選 / 清除 ---------- */
+function selectAll(){document.querySelectorAll('#checklist input').forEach(cb=>cb.checked=true);}
+function clearAll(){document.querySelectorAll('#checklist input').forEach(cb=>cb.checked=false);}
 
-  // 2️⃣ 產生完整的 1~18 數字陣列
-  const allNumbers = Array.from({length: TOTAL_NUM}, (_,i) => i+1);
+/* ---------- 核心分組程式 ---------- */
+function distribute(){
+    // 1️⃣ 取得已勾選的「標記」號碼
+    const marked = [...document.querySelectorAll('#checklist input:checked')]
+                  .map(cb=>+cb.value);      // e.g. [2,5,9]
 
-  // 3️⃣ 把標記與非標記分開
-  const marked   = allNumbers.filter(n => checked.includes(n));
-  const unmarked = allNumbers.filter(n => !checked.includes(n));
+    // 2️⃣ 完整 1~18 陣列
+    const all = Array.from({length:TOTAL_NUM},(_,i)=>i+1);
 
-  // 4️⃣ 先把標記平均分配到三組
-  const groups = Array.from({length: GROUP_COUNT}, () => []);
-  const targetMarkedPerGroup = Math.floor(marked.length / GROUP_COUNT);
-  const extraMarked = marked.length % GROUP_COUNT; // 會給前 extraMarked 組
+    // 3️⃣ 分離標記與普通
+    const markedArr   = all.filter(n=>marked.includes(n));
+    const unmarkedArr = all.filter(n=>!marked.includes(n));
 
-  // 隨機打亂標記的順序，避免總是同樣順序
-  shuffle(marked);
+    // 4️⃣ 三組容器
+    const groups = Array.from({length:GROUP_COUNT},()=>[]);
 
-  // 為每組放入目標的標記個數
-  let idx = 0;
-  for (let g = 0; g < GROUP_COUNT; g++) {
-    const need = targetMarkedPerGroup + (g < extraMarked ? 1 : 0);
-    for (let i = 0; i < need; i++) {
-      groups[g].push(marked[idx++]);
+    // 5️⃣ 平均分配「標記」(盡量相等)
+    const base  = Math.floor(markedArr.length / GROUP_COUNT);
+    const extra = markedArr.length % GROUP_COUNT;   // 前 extra 組多 1 個
+    shuffle(markedArr);
+    let idx = 0;
+    for (let g=0; g<GROUP_COUNT; g++){
+        const need = base + (g<extra?1:0);
+        for(let i=0;i<need;i++) groups[g].push(markedArr[idx++]);
     }
-  }
 
-  // 5️⃣ 接著把普通數字隨機分配，填滿每組到 6 個
-  shuffle(unmarked);
-  let uIdx = 0;
-  for (let g = 0; g < GROUP_COUNT; g++) {
-    while (groups[g].length < PER_GROUP) {
-      groups[g].push(unmarked[uIdx++]);
+    // 6️⃣ 隨機填滿普通數字，使每組恰好 6 個
+    shuffle(unmarkedArr);
+    let uIdx = 0;
+    for (let g=0; g<GROUP_COUNT; g++){
+        while(groups[g].length < PER_GROUP){
+            groups[g].push(unmarkedArr[uIdx++]);
+        }
     }
-  }
 
-  // 6️⃣ 顯示結果
-  const resultDiv = document.getElementById('result');
-  resultDiv.innerHTML = ''; // 清空舊結果
-  groups.forEach((grp, i) => {
-    const box = document.createElement('div');
-    box.className = 'group';
-    box.innerHTML = `<h2>第 ${i+1} 組</h2><ul>` +
-                    grp.map(n => `<li>${n}${checked.includes(n) ? ' <strong>(標記)</strong>' : ''}</li>`).join('') +
-                    `</ul>`;
-    resultDiv.appendChild(box);
-  });
+    // 7️⃣ ***繪製更美觀的結果卡***
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = '';               // 清除舊結果
+
+    groups.forEach((grp,i)=>{
+        const card = document.createElement('div');
+        card.className = 'group';
+
+        // 卡片標題
+        const header = document.createElement('div');
+        header.className = 'group-header';
+        header.innerHTML = `
+            <div class="badge">${i+1}</div>
+            <h2>第 ${i+1} 組</h2>
+        `;
+
+        // 數字列表（徽章樣式）
+        const list = document.createElement('div');
+        list.className = 'number-list';
+        list.innerHTML = grp.map(n=>{
+            const isMarked = marked.includes(n);
+            return `<div class="num${isMarked?' marked':''}">${n}</div>`;
+        }).join('');
+
+        card.appendChild(header);
+        card.appendChild(list);
+        resultDiv.appendChild(card);
+    });
 }
 </script>
 </body>
