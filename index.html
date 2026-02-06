@@ -46,6 +46,18 @@ for (let i = 1; i <= TOTAL_NUM; i++) {
   label.innerHTML = `<input type="checkbox" value="${i}"> ${i}`;
   checklistDiv.appendChild(label);
 }
+  /* ---- 輔助函式 -------------------------------------------------------- */
+function shuffle(array) {
+  // Fisher‑Yates shuffle
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+/* ---- 主要分組函式 ---------------------------------------------------- */
+function distribute() {
     const checked = [...document.querySelectorAll('#checklist input:checked')]
                   .map(cb => parseInt(cb.value,10));   // 例: [2,5,9]
 
