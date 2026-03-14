@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>18 個數字隨機平均分組</title>
+<title>隨機抽簽分組</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 /* --------------------------------------------------------------
@@ -48,42 +48,14 @@ h1{font-size:1.8rem;text-align:center;margin:1rem 0;}
 .controls button:hover{background:var(--primary-dark);}
 .controls button:active{transform:scale(.96);}
 
-/* ---------- 1~18 格子（自訂 checkbox） ---------- */
-.checklist{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(45px,1fr));
-    gap:.6rem .8rem;
+/* ---------- 輸入區 ---------- */
+.input-area{
     margin-bottom:1rem;
 }
-.checklist input{position:absolute;opacity:0;width:0;height:0;}
-.checklist label{
-    position:relative;
-    width%;height:var(--touch-size);
-    cursor:pointer;display:flex;align-items:center;justify-content:center;
-    border-radius:var(--radius);background:#e2e2e2;
-    overflow:hidden;
-}
-.checklist label::before{
-    content:attr(data-num);
-    display:flex;align-items:center;justify-content:center;
-    width:2rem;height:2rem;border:2px solid #777;border-radius:50%;
-    font-weight:600;background:#fff;
-    transition:background .2s,border-color .2s,color .2s;
-}
-.checklist input:checked + label{
-    background:var(--primary-light);
-}
-.checklist input:checked + label::before{
-    background:var(--primary);border-color:var(--primary);color:var(--text-light);
-}
-.checklist label::after{
-    content:"";position:absolute;border-radius:50%;width:5px;height:5px;
-    background:rgba(0,0,0,.15);opacity:0;transform:scale(1);
-    transition:transform .4s,opacity .4s;
-}
-.checklist label:active::after{
-    width:120px;height:120px;top:calc(50% - 60px);left:calc(50% - 60px);
-    opacity:.3;transform:scale(0);
+.input-area textarea{
+    width:100%;height:200px;padding:.6rem;font-size:1rem;
+    border:1px solid #ccc;border-radius:var(--radius);
+    font-family:monospace;
 }
 
 /* ---------- 隨機分組按鈕 ---------- */
@@ -96,6 +68,19 @@ h1{font-size:1.8rem;text-align:center;margin:1rem 0;}
 }
 .btn:hover{background:var(--primary-dark);}
 .btn:active{transform:scale(.96);}
+
+/* ---------- 複制按鈕 ---------- */
+.copy-btn{
+    display:block;width:100%;max-width:260px;margin:0 auto 1rem;
+    padding:.5rem 1rem;font-size:.9rem;
+    background:#28a745;color:#fff;
+    border:none;border-radius:var(--radius);cursor:pointer;
+    transition:background .2s,transform .1s;
+}
+.copy-btn:hover{background:#218838;}
+.copy-btn:active{transform:scale(.96);}
+
+/* --------------------------------------------------------------
 
 /* --------------------------------------------------------------
    3️⃣ ★ 重點：更美觀的「結果卡」 ★
@@ -176,18 +161,17 @@ h1{font-size:1.8rem;text-align:center;margin:1rem 0;}
 
 <body>
 <div class="container">
-    <h1>18 個數字隨機平均分組</h1>
+    <h1>隨機抽簽分組</h1>
 
-    <!-- 全選 / 清除 -->
-    <div class="controls">
-        <button onclick="selectAll()">全選標記</button>
-        <button onclick="clearAll()">清除標記</button>
+    <p>請貼上清單（每行一個，*號為標記）：</p>
+    <div class="input-area">
+        <textarea id="inputList" placeholder="例如：
+1 辰玲
+2 趙
+*3 茶
+4 叉滴
+..."></textarea>
     </div>
-
-    <p>點選要「標記」的數字：</p>
-
-    <!-- 1~18 的格子 -->
-    <div class="checklist" id="checklist"></div>
 
     <!-- 隨機分組 -->
     <button class="btn" onclick="distribute()">隨機分配到 3 組</button>
@@ -200,25 +184,7 @@ h1{font-size:1.8rem;text-align:center;margin:1rem 0;}
 /* --------------------------------------------------------------
    基本變數 & 工具
 ----------------------------------------------------------------- */
-const TOTAL_NUM   = 18;                // 1~18
 const GROUP_COUNT = 3;                 // 三組
-const PER_GROUP   = TOTAL_NUM / GROUP_COUNT; // 每組 6 個
-
-/* ---------- 建立 1~18 的格子 ---------- */
-const checklist = document.getElementById('checklist');
-for (let i = 1; i <= TOTAL_NUM; i++) {
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.id   = `num${i}`;
-    cb.value= i;
-
-    const lbl = document.createElement('label');
-    lbl.htmlFor = cb.id;
-    lbl.setAttribute('data-num', i);  // 用 ::before 顯示號碼
-
-    checklist.appendChild(cb);
-    checklist.appendChild(lbl);
-}
 
 /* ---------- Fisher‑Yates 洗牌 ---------- */
 function shuffle(arr){
@@ -229,27 +195,40 @@ function shuffle(arr){
     return arr;
 }
 
-/* ---------- 全選 / 清除 ---------- */
-function selectAll(){document.querySelectorAll('#checklist input').forEach(cb=>cb.checked=true);}
-function clearAll(){document.querySelectorAll('#checklist input').forEach(cb=>cb.checked=false);}
+/* ---------- 解析輸入清單 ---------- */
+function parseList(text) {
+    const lines = text.trim().split('\n');
+    const people = [];
+    lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+        const isMarked = line.startsWith('*');
+        const content = isMarked ? line.substring(1).trim() : line;
+        // 假設格式是 "數字 姓名" 或 "姓名"
+        const parts = content.split(/\s+/);
+        const name = parts.slice(1).join(' ') || parts[0]; // 如果沒有數字，就取整個
+        people.push({ name, marked: isMarked });
+    });
+    return people;
+}
 
 /* ---------- 核心分組程式 ---------- */
 function distribute(){
-    // 1️⃣ 取得已勾選的「標記」號碼
-    const marked = [...document.querySelectorAll('#checklist input:checked')]
-                  .map(cb=>+cb.value);      // e.g. [2,5,9]
+    const inputText = document.getElementById('inputList').value;
+    const people = parseList(inputText);
+    if (people.length === 0) {
+        alert('請輸入清單');
+        return;
+    }
 
-    // 2️⃣ 完整 1~18 陣列
-    const all = Array.from({length:TOTAL_NUM},(_,i)=>i+1);
+    // 分離標記與普通
+    const markedArr = people.filter(p => p.marked);
+    const unmarkedArr = people.filter(p => !p.marked);
 
-    // 3️⃣ 分離標記與普通
-    const markedArr   = all.filter(n=>marked.includes(n));
-    const unmarkedArr = all.filter(n=>!marked.includes(n));
-
-    // 4️⃣ 三組容器
+    // 三組容器
     const groups = Array.from({length:GROUP_COUNT},()=>[]);
 
-    // 5️⃣ 平均分配「標記」(盡量相等)
+    // 平均分配「標記」(盡量相等)
     const base  = Math.floor(markedArr.length / GROUP_COUNT);
     const extra = markedArr.length % GROUP_COUNT;   // 前 extra 組多 1 個
     shuffle(markedArr);
@@ -259,16 +238,16 @@ function distribute(){
         for(let i=0;i<need;i++) groups[g].push(markedArr[idx++]);
     }
 
-    // 6️⃣ 隨機填滿普通數字，使每組恰好 6 個
+    // 隨機填滿普通姓名
     shuffle(unmarkedArr);
     let uIdx = 0;
     for (let g=0; g<GROUP_COUNT; g++){
-        while(groups[g].length < PER_GROUP){
+        while(groups[g].length < Math.ceil(people.length / GROUP_COUNT) && uIdx < unmarkedArr.length){
             groups[g].push(unmarkedArr[uIdx++]);
         }
     }
 
-    // 7️⃣ ***繪製更美觀的結果卡***
+    // 繪製結果卡
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = '';               // 清除舊結果
 
@@ -284,17 +263,42 @@ function distribute(){
             <h2>第 ${i+1} 組</h2>
         `;
 
-        // 數字列表（徽章樣式）
+        // 姓名列表（徽章樣式）
         const list = document.createElement('div');
         list.className = 'number-list';
-        list.innerHTML = grp.map(n=>{
-            const isMarked = marked.includes(n);
-            return `<div class="num${isMarked?' marked':''}">${n}</div>`;
+        list.innerHTML = grp.map(p=>{
+            const isMarked = p.marked;
+            return `<div class="num${isMarked?' marked':''}">${p.name}</div>`;
         }).join('');
 
         card.appendChild(header);
         card.appendChild(list);
         resultDiv.appendChild(card);
+    });
+
+    // 添加複制按鈕
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.textContent = '一鍵複制成直條格式';
+    copyBtn.onclick = () => copyToClipboard(groups);
+    resultDiv.appendChild(copyBtn);
+}
+
+/* ---------- 複制到剪貼簿 ---------- */
+function copyToClipboard(groups) {
+    let text = '';
+    groups.forEach((grp, i) => {
+        text += `第${i+1}組：\n`;
+        grp.forEach(p => {
+            text += `${p.name}\n`;
+        });
+        text += '\n';
+    });
+    navigator.clipboard.writeText(text).then(() => {
+        alert('已複制到剪貼簿！');
+    }).catch(err => {
+        console.error('複制失敗:', err);
+        alert('複制失敗，請手動複制。');
     });
 }
 </script>
