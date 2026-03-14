@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>隨機抽簽分組</title>
+<title>隨機抽簽分隊</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 /* --------------------------------------------------------------
@@ -161,7 +161,7 @@ h1{font-size:1.8rem;text-align:center;margin:1rem 0;}
 
 <body>
 <div class="container">
-    <h1>隨機抽簽分組</h1>
+    <h1>隨機抽簽分隊</h1>
 
     <p>請貼上清單（每行一個，*號為標記）：</p>
     <div class="input-area">
@@ -174,7 +174,7 @@ h1{font-size:1.8rem;text-align:center;margin:1rem 0;}
     </div>
 
     <!-- 隨機分組 -->
-    <button class="btn" onclick="distribute()">隨機分配到 3 組</button>
+    <button class="btn" onclick="distribute()">隨機分配到 3 隊</button>
 
     <!-- 結果區（已套用更美觀的卡片） -->
     <div class="result" id="result"></div>
@@ -260,7 +260,7 @@ function distribute(){
         header.className = 'group-header';
         header.innerHTML = `
             <div class="badge">${i+1}</div>
-            <h2>第 ${i+1} 組</h2>
+            <h2>第 ${i+1} 隊</h2>
         `;
 
         // 姓名列表（徽章樣式）
@@ -288,7 +288,7 @@ function distribute(){
 function copyToClipboard(groups) {
     let text = '';
     groups.forEach((grp, i) => {
-        text += `第${i+1}組：\n`;
+        text += `第${i+1}隊：\n`;
         grp.forEach(p => {
             text += `${p.name}\n`;
         });
